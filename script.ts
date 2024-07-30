@@ -1,13 +1,15 @@
 const NEAR = 2;
-// const DIAGONALS = false;
 const REAL_COLOR = false;
 
-type Color = { color: number; count: number; nears: Near[] };
+type Color = {
+  color: number /* top right color */;
+  count: number;
+  patterns: Pattern[];
+};
 
-type Near = {
-  colors: { color: number; count: number }[];
-  x: number;
-  y: number;
+type Pattern = {
+  colors: number[]; // square colors
+  count: number;
 };
 
 let time = Date.now();
@@ -54,23 +56,68 @@ function getPixel(
   }
 }
 
-function addNear(color: number, nears: Near[], x: number, y: number) {
-  let near = nears.find((n) => n.x === x && n.y === y);
-  if (!near) {
-    near = { x, y, colors: [] };
-    nears.push(near);
+function testPatternColors(
+  patternColors: number[],
+  pattern: Pattern,
+  exact = false
+) {
+  for (let i = 0; i < patternColors.length; i++) {
+    if (exact && patternColors[i] !== pattern.colors[i]) {
+      return false;
+    }
+    if (
+      !exact &&
+      patternColors[i] !== -1 &&
+      pattern.colors[i] !== -1 &&
+      patternColors[i] !== pattern.colors[i]
+    ) {
+      return false;
+    }
   }
+  return true;
+}
 
-  const colorData = near.colors.find((data) => data.color === color);
-  if (colorData) {
-    colorData.count++;
+function addPattern(patternColors: number[], patterns: Pattern[]) {
+  let near = patterns.find((pattern) =>
+    testPatternColors(patternColors, pattern, true)
+  );
+  if (!near) {
+    near = { count: 1, colors: patternColors };
+    patterns.push(near);
   } else {
-    near.colors.push({ color, count: 1 });
+    near.count++;
   }
 }
 
 function sortColorCount<Item extends { count: number }>(a: Item, b: Item) {
   return b.count - a.count;
+}
+
+function getPatternColors(
+  x: number,
+  y: number,
+  imageData: { width: number; height: number; data: Uint8ClampedArray }
+) {
+  let patternColors: number[] = [];
+  for (let nearX = -NEAR; nearX <= 0; nearX++) {
+    for (let nearY = -NEAR; nearY <= 0; nearY++) {
+      if (!(nearX === 0 && nearY === 0)) {
+        const nearAbsX = x + nearX;
+        const nearAbsY = y + nearY;
+        if (
+          nearAbsX >= 0 &&
+          nearAbsX < imageData.width &&
+          nearAbsY >= 0 &&
+          nearAbsY < imageData.height
+        ) {
+          patternColors.push(getPixel(nearAbsX, nearAbsY, imageData));
+        } else {
+          patternColors.push(-2);
+        }
+      }
+    }
+  }
+  return patternColors;
 }
 
 async function extractColorList(input: HTMLImageElement) {
@@ -92,7 +139,7 @@ async function extractColorList(input: HTMLImageElement) {
         colorData = {
           color,
           count: 1,
-          nears: [],
+          patterns: [],
         };
         colors.push(colorData);
       } else {
@@ -103,27 +150,8 @@ async function extractColorList(input: HTMLImageElement) {
         topLeftColor = colorData;
       }
 
-      for (let nearX = 0; nearX <= NEAR; nearX++) {
-        for (let nearY = 0; nearY <= NEAR; nearY++) {
-          if (!(nearX === 0 && nearY === 0)) {
-            const nearAbsX = x + nearX;
-            const nearAbsY = y + nearY;
-            if (
-              nearAbsX >= 0 &&
-              nearAbsX < imageData.width &&
-              nearAbsY >= 0 &&
-              nearAbsY < imageData.height
-            ) {
-              addNear(
-                getPixel(nearAbsX, nearAbsY, imageData),
-                colorData.nears,
-                nearX,
-                nearY
-              );
-            }
-          }
-        }
-      }
+      const patternColors = getPatternColors(x, y, imageData);
+      addPattern(patternColors, colorData.patterns);
     }
   }
 
@@ -143,14 +171,18 @@ async function process(input: HTMLImageElement, output: HTMLCanvasElement) {
   console.time("Sort image colors");
   colors.sort(sortColorCount);
   for (const colorData of colors) {
-    for (const near of colorData.nears) {
-      near.colors.sort(sortColorCount);
-    }
+    colorData.patterns.sort(sortColorCount);
   }
   console.timeEnd("Sort image colors");
 
   console.time("Generate image colors");
   const dataArray = new Uint8ClampedArray(output.width * output.height * 4);
+  const fakeImageData = {
+    width: output.width,
+    height: output.height,
+    data: dataArray,
+  };
+
   for (let y = 0; y < output.height; y++) {
     for (let x = 0; x < output.width; x++) {
       await pauseIfTooLong(() =>
@@ -158,80 +190,41 @@ async function process(input: HTMLImageElement, output: HTMLCanvasElement) {
       );
 
       let color = -1;
-
       if (x === 0 && y === 0) {
         color = topLeftColor.color;
       } else {
-        const nearColors: { x: number; y: number; color: number }[] = [];
-        for (let nearX = -NEAR; nearX <= 0; nearX++) {
-          for (let nearY = -NEAR; nearY <= 0; nearY++) {
-            const nearAbsX = x + nearX;
-            const nearAbsY = y + nearY;
+        const patternColors = getPatternColors(x, y, fakeImageData);
+        let filteredColors = colors.filter((color) =>
+          color.patterns.find((pattern) =>
+            testPatternColors(patternColors, pattern, false)
+          )
+        );
 
-            if (
-              nearAbsX >= 0 &&
-              nearAbsY >= 0 &&
-              nearAbsX <= x &&
-              !(nearAbsY === y && nearAbsX === x)
-            ) {
-              nearColors.push({
-                x: nearX,
-                y: nearY,
-                color: getPixel(nearAbsX, nearAbsY, {
-                  width: output.width,
-                  data: dataArray,
-                }),
-              });
-            }
-          }
-        }
-
-        let nearList: { color: number; count: number }[][] = [];
-        for (const nearColor of nearColors) {
-          const colorData = colors.find(
-            (colorData) => colorData.color === nearColor.color
+        while (filteredColors.length === 0) {
+          patternColors[Math.floor(Math.random() * patternColors.length)] = -1;
+          filteredColors = colors.filter((color) =>
+            color.patterns.find((pattern) =>
+              testPatternColors(patternColors, pattern, false)
+            )
           );
-
-          const list = colorData?.nears.find(
-            (near) => near.x === -nearColor.x && near.y === -nearColor.y
-          )?.colors;
-
-          if (list && list.length > 0) {
-            nearList.push(list);
-          }
         }
 
-        let cleanList = nearList.reduce((fullList, addList, index) => {
-          if (index === 0) {
-            return fullList;
-          }
-          const newList = fullList
-            .filter((item) => addList.find((it) => item.color === it.color))
-            .map((item) => ({
-              ...item,
-              count:
-                item.count +
-                addList.find((it) => item.color === it.color).count,
-            }));
-          return newList;
-        }, nearList[0]);
+        filteredColors.map((colorData) => {
+          const patterns = colorData.patterns.filter((pattern) =>
+            testPatternColors(patternColors, pattern, false)
+          );
+          return {
+            color: colorData.color,
+            patterns,
+            count: patterns.reduce(
+              (total, pattern) => total + pattern.count,
+              colorData.count
+            ),
+          };
+        });
+        filteredColors.sort(sortColorCount);
 
-        // Fallback if not found
-        if (cleanList.length === 0) {
-          cleanList = nearList.flat(2).reduce((list, color) => {
-            const item = list.find((item) => item.color === color.color);
-            if (item) {
-              item.count += color.count;
-            } else {
-              list.push(color);
-            }
-            return list;
-          }, [] as typeof cleanList);
-        }
-
-        cleanList.sort(sortColorCount);
-
-        color = getRandomItem(cleanList).color;
+        color = getRandomItem(filteredColors).color;
       }
 
       const index = (x + y * output.width) * 4;
@@ -263,7 +256,7 @@ async function start(src, { width, height }) {
 
 (async () => {
   await start("assets/cave.png", { width: 128, height: 32 });
-  await start("assets/square-2.png", { width: 128, height: 128 });
+  await start("assets/square-2.png", { width: 64, height: 64 });
   await start("assets/square.png", { width: 32, height: 32 });
   await start("assets/input-4.png", { width: 128, height: 128 });
   await start("assets/input-5.png", { width: 128, height: 128 });

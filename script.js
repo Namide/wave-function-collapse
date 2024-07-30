@@ -1,14 +1,3 @@
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -47,7 +36,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 var _this = this;
 var NEAR = 2;
-// const DIAGONALS = false;
 var REAL_COLOR = false;
 var time = Date.now();
 var pauseIfTooLong = function (callback) { return __awaiter(_this, void 0, void 0, function () {
@@ -94,22 +82,56 @@ function getPixel(x, y, _a) {
             (((data[index + 2] >> 4) & 0xf) << 4));
     }
 }
-function addNear(color, nears, x, y) {
-    var near = nears.find(function (n) { return n.x === x && n.y === y; });
-    if (!near) {
-        near = { x: x, y: y, colors: [] };
-        nears.push(near);
+function testPatternColors(patternColors, pattern, exact) {
+    if (exact === void 0) { exact = false; }
+    for (var i = 0; i < patternColors.length; i++) {
+        if (exact && patternColors[i] !== pattern.colors[i]) {
+            return false;
+        }
+        if (!exact &&
+            patternColors[i] !== -1 &&
+            pattern.colors[i] !== -1 &&
+            patternColors[i] !== pattern.colors[i]) {
+            return false;
+        }
     }
-    var colorData = near.colors.find(function (data) { return data.color === color; });
-    if (colorData) {
-        colorData.count++;
+    return true;
+}
+function addPattern(patternColors, patterns) {
+    var near = patterns.find(function (pattern) {
+        return testPatternColors(patternColors, pattern, true);
+    });
+    if (!near) {
+        near = { count: 1, colors: patternColors };
+        patterns.push(near);
     }
     else {
-        near.colors.push({ color: color, count: 1 });
+        near.count++;
     }
 }
 function sortColorCount(a, b) {
     return b.count - a.count;
+}
+function getPatternColors(x, y, imageData) {
+    var patternColors = [];
+    for (var nearX = -NEAR; nearX <= 0; nearX++) {
+        for (var nearY = -NEAR; nearY <= 0; nearY++) {
+            if (!(nearX === 0 && nearY === 0)) {
+                var nearAbsX = x + nearX;
+                var nearAbsY = y + nearY;
+                if (nearAbsX >= 0 &&
+                    nearAbsX < imageData.width &&
+                    nearAbsY >= 0 &&
+                    nearAbsY < imageData.height) {
+                    patternColors.push(getPixel(nearAbsX, nearAbsY, imageData));
+                }
+                else {
+                    patternColors.push(-2);
+                }
+            }
+        }
+    }
+    return patternColors;
 }
 function extractColorList(input) {
     return __awaiter(this, void 0, void 0, function () {
@@ -129,7 +151,7 @@ function extractColorList(input) {
                 case 1:
                     if (!(x < imageData.width)) return [3 /*break*/, 6];
                     _loop_1 = function (y) {
-                        var color, colorData, nearX, nearY, nearAbsX, nearAbsY;
+                        var color, colorData, patternColors;
                         return __generator(this, function (_b) {
                             switch (_b.label) {
                                 case 0: return [4 /*yield*/, pauseIfTooLong()];
@@ -141,7 +163,7 @@ function extractColorList(input) {
                                         colorData = {
                                             color: color,
                                             count: 1,
-                                            nears: []
+                                            patterns: []
                                         };
                                         colors.push(colorData);
                                     }
@@ -151,20 +173,8 @@ function extractColorList(input) {
                                     if (!topLeftColor) {
                                         topLeftColor = colorData;
                                     }
-                                    for (nearX = 0; nearX <= NEAR; nearX++) {
-                                        for (nearY = 0; nearY <= NEAR; nearY++) {
-                                            if (!(nearX === 0 && nearY === 0)) {
-                                                nearAbsX = x + nearX;
-                                                nearAbsY = y + nearY;
-                                                if (nearAbsX >= 0 &&
-                                                    nearAbsX < imageData.width &&
-                                                    nearAbsY >= 0 &&
-                                                    nearAbsY < imageData.height) {
-                                                    addNear(getPixel(nearAbsX, nearAbsY, imageData), colorData.nears, nearX, nearY);
-                                                }
-                                            }
-                                        }
-                                    }
+                                    patternColors = getPatternColors(x, y, imageData);
+                                    addPattern(patternColors, colorData.patterns);
                                     return [2 /*return*/];
                             }
                         });
@@ -189,11 +199,10 @@ function extractColorList(input) {
     });
 }
 function process(input, output) {
-    var _a;
     return __awaiter(this, void 0, void 0, function () {
-        var ctx, _b, colors, topLeftColor, _i, colors_1, colorData, _c, _d, near, dataArray, y, x, color, nearColors, nearX, nearY, nearAbsX, nearAbsY, nearList, _loop_2, _e, nearColors_1, nearColor, cleanList, index;
-        return __generator(this, function (_f) {
-            switch (_f.label) {
+        var ctx, _a, colors, topLeftColor, _i, colors_1, colorData, dataArray, fakeImageData, y, _loop_2, x;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
                 case 0:
                     output.width = output.width || input.width;
                     output.height = output.height || input.height;
@@ -201,102 +210,84 @@ function process(input, output) {
                     console.time("Extract image colors");
                     return [4 /*yield*/, extractColorList(input)];
                 case 1:
-                    _b = _f.sent(), colors = _b.colors, topLeftColor = _b.topLeftColor;
+                    _a = _b.sent(), colors = _a.colors, topLeftColor = _a.topLeftColor;
                     console.timeEnd("Extract image colors");
                     console.time("Sort image colors");
                     colors.sort(sortColorCount);
                     for (_i = 0, colors_1 = colors; _i < colors_1.length; _i++) {
                         colorData = colors_1[_i];
-                        for (_c = 0, _d = colorData.nears; _c < _d.length; _c++) {
-                            near = _d[_c];
-                            near.colors.sort(sortColorCount);
-                        }
+                        colorData.patterns.sort(sortColorCount);
                     }
                     console.timeEnd("Sort image colors");
                     console.time("Generate image colors");
                     dataArray = new Uint8ClampedArray(output.width * output.height * 4);
+                    fakeImageData = {
+                        width: output.width,
+                        height: output.height,
+                        data: dataArray
+                    };
                     y = 0;
-                    _f.label = 2;
+                    _b.label = 2;
                 case 2:
                     if (!(y < output.height)) return [3 /*break*/, 7];
+                    _loop_2 = function (x) {
+                        var color, patternColors_1, filteredColors, index;
+                        return __generator(this, function (_c) {
+                            switch (_c.label) {
+                                case 0: return [4 /*yield*/, pauseIfTooLong(function () {
+                                        return ctx.putImageData(new ImageData(dataArray, output.width), 0, 0);
+                                    })];
+                                case 1:
+                                    _c.sent();
+                                    color = -1;
+                                    if (x === 0 && y === 0) {
+                                        color = topLeftColor.color;
+                                    }
+                                    else {
+                                        patternColors_1 = getPatternColors(x, y, fakeImageData);
+                                        filteredColors = colors.filter(function (color) {
+                                            return color.patterns.find(function (pattern) {
+                                                return testPatternColors(patternColors_1, pattern, false);
+                                            });
+                                        });
+                                        while (filteredColors.length === 0) {
+                                            patternColors_1[Math.floor(Math.random() * patternColors_1.length)] = -1;
+                                            filteredColors = colors.filter(function (color) {
+                                                return color.patterns.find(function (pattern) {
+                                                    return testPatternColors(patternColors_1, pattern, false);
+                                                });
+                                            });
+                                        }
+                                        filteredColors.map(function (colorData) {
+                                            var patterns = colorData.patterns.filter(function (pattern) {
+                                                return testPatternColors(patternColors_1, pattern, false);
+                                            });
+                                            return {
+                                                color: colorData.color,
+                                                patterns: patterns,
+                                                count: patterns.reduce(function (total, pattern) { return total + pattern.count; }, colorData.count)
+                                            };
+                                        });
+                                        filteredColors.sort(sortColorCount);
+                                        color = getRandomItem(filteredColors).color;
+                                    }
+                                    index = (x + y * output.width) * 4;
+                                    dataArray[index] = (color >> 16) & 0xff;
+                                    dataArray[index + 1] = (color >> 8) & 0xff;
+                                    dataArray[index + 2] = color & 0xff;
+                                    dataArray[index + 3] = 0xff;
+                                    return [2 /*return*/];
+                            }
+                        });
+                    };
                     x = 0;
-                    _f.label = 3;
+                    _b.label = 3;
                 case 3:
                     if (!(x < output.width)) return [3 /*break*/, 6];
-                    return [4 /*yield*/, pauseIfTooLong(function () {
-                            return ctx.putImageData(new ImageData(dataArray, output.width), 0, 0);
-                        })];
+                    return [5 /*yield**/, _loop_2(x)];
                 case 4:
-                    _f.sent();
-                    color = -1;
-                    if (x === 0 && y === 0) {
-                        color = topLeftColor.color;
-                    }
-                    else {
-                        nearColors = [];
-                        for (nearX = -NEAR; nearX <= 0; nearX++) {
-                            for (nearY = -NEAR; nearY <= 0; nearY++) {
-                                nearAbsX = x + nearX;
-                                nearAbsY = y + nearY;
-                                if (nearAbsX >= 0 &&
-                                    nearAbsY >= 0 &&
-                                    nearAbsX <= x &&
-                                    !(nearAbsY === y && nearAbsX === x)) {
-                                    nearColors.push({
-                                        x: nearX,
-                                        y: nearY,
-                                        color: getPixel(nearAbsX, nearAbsY, {
-                                            width: output.width,
-                                            data: dataArray
-                                        })
-                                    });
-                                }
-                            }
-                        }
-                        nearList = [];
-                        _loop_2 = function (nearColor) {
-                            var colorData = colors.find(function (colorData) { return colorData.color === nearColor.color; });
-                            var list = (_a = colorData === null || colorData === void 0 ? void 0 : colorData.nears.find(function (near) { return near.x === -nearColor.x && near.y === -nearColor.y; })) === null || _a === void 0 ? void 0 : _a.colors;
-                            if (list && list.length > 0) {
-                                nearList.push(list);
-                            }
-                        };
-                        for (_e = 0, nearColors_1 = nearColors; _e < nearColors_1.length; _e++) {
-                            nearColor = nearColors_1[_e];
-                            _loop_2(nearColor);
-                        }
-                        cleanList = nearList.reduce(function (fullList, addList, index) {
-                            if (index === 0) {
-                                return fullList;
-                            }
-                            var newList = fullList
-                                .filter(function (item) { return addList.find(function (it) { return item.color === it.color; }); })
-                                .map(function (item) { return (__assign(__assign({}, item), { count: item.count +
-                                    addList.find(function (it) { return item.color === it.color; }).count })); });
-                            return newList;
-                        }, nearList[0]);
-                        // Fallback if not found
-                        if (cleanList.length === 0) {
-                            cleanList = nearList.flat(2).reduce(function (list, color) {
-                                var item = list.find(function (item) { return item.color === color.color; });
-                                if (item) {
-                                    item.count += color.count;
-                                }
-                                else {
-                                    list.push(color);
-                                }
-                                return list;
-                            }, []);
-                        }
-                        cleanList.sort(sortColorCount);
-                        color = getRandomItem(cleanList).color;
-                    }
-                    index = (x + y * output.width) * 4;
-                    dataArray[index] = (color >> 16) & 0xff;
-                    dataArray[index + 1] = (color >> 8) & 0xff;
-                    dataArray[index + 2] = color & 0xff;
-                    dataArray[index + 3] = 0xff;
-                    _f.label = 5;
+                    _b.sent();
+                    _b.label = 5;
                 case 5:
                     x++;
                     return [3 /*break*/, 3];
@@ -342,7 +333,7 @@ function start(src, _a) {
             case 0: return [4 /*yield*/, start("assets/cave.png", { width: 128, height: 32 })];
             case 1:
                 _a.sent();
-                return [4 /*yield*/, start("assets/square-2.png", { width: 128, height: 128 })];
+                return [4 /*yield*/, start("assets/square-2.png", { width: 64, height: 64 })];
             case 2:
                 _a.sent();
                 return [4 /*yield*/, start("assets/square.png", { width: 32, height: 32 })];
