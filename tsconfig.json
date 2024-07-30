@@ -1,0 +1,6 @@
+{
+  "include": ["script.ts"],
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"]
+  }
+}
