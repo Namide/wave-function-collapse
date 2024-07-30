@@ -1,6 +1,6 @@
-const DIST = 5;
-const NEAR = 5;
-const ITERATIONS_MAX = 20000;
+const NEAR = 2;
+// const DIAGONALS = false;
+const REAL_COLOR = false;
 
 type Color = { color: number; count: number; nears: Near[] };
 
@@ -9,8 +9,6 @@ type Near = {
   x: number;
   y: number;
 };
-
-const wait = () => new Promise((resolve) => requestAnimationFrame(resolve));
 
 let time = Date.now();
 const pauseIfTooLong = async (callback?: () => void) => {
@@ -43,21 +41,23 @@ function getPixel(
 ) {
   const index = (x + y * width) * 4;
 
-  // Approximation color
-  return (
-    (((data[index] >> 4) & 0xf) << 20) |
-    (((data[index + 1] >> 4) & 0xf) << 12) |
-    (((data[index + 2] >> 4) & 0xf) << 4)
-  );
-
-  // Full color
-  // return data[index] << 16 | data[index+1] << 8 | data[index+2]
+  if (REAL_COLOR) {
+    // Full color
+    return (data[index] << 16) | (data[index + 1] << 8) | data[index + 2];
+  } else {
+    // Approximation color
+    return (
+      (((data[index] >> 4) & 0xf) << 20) |
+      (((data[index + 1] >> 4) & 0xf) << 12) |
+      (((data[index + 2] >> 4) & 0xf) << 4)
+    );
+  }
 }
 
-function addNear(color: number, nears: Near[], nearX: number, nearY: number) {
-  let near = nears.find((n) => n.x === nearX && n.y === nearY);
+function addNear(color: number, nears: Near[], x: number, y: number) {
+  let near = nears.find((n) => n.x === x && n.y === y);
   if (!near) {
-    near = { x: nearX, y: nearY, colors: [] };
+    near = { x, y, colors: [] };
     nears.push(near);
   }
 
@@ -69,15 +69,7 @@ function addNear(color: number, nears: Near[], nearX: number, nearY: number) {
   }
 }
 
-function mixRefs(as, bs) {
-  const list = as.filter((a) => bs.find((b) => b.color === a.color));
-  if (list.length === 0) {
-    return as;
-  }
-  return list;
-}
-
-function sortColorCount(a, b) {
+function sortColorCount<Item extends { count: number }>(a: Item, b: Item) {
   return b.count - a.count;
 }
 
@@ -90,8 +82,9 @@ async function extractColorList(input: HTMLImageElement) {
   const imageData = ctx.getImageData(0, 0, input.width, input.height);
 
   const colors: Color[] = [];
-  for (let x = DIST; x < imageData.width - DIST; x++) {
-    for (let y = DIST; y < imageData.height - DIST; y++) {
+  let topLeftColor: Color;
+  for (let x = 0; x < imageData.width; x++) {
+    for (let y = 0; y < imageData.height; y++) {
       await pauseIfTooLong();
       const color = getPixel(x, y, imageData);
       let colorData = colors.find((data) => data.color === color);
@@ -106,8 +99,12 @@ async function extractColorList(input: HTMLImageElement) {
         colorData.count++;
       }
 
-      for (let nearX = -NEAR; nearX <= NEAR; nearX++) {
-        for (let nearY = -NEAR; nearY <= NEAR; nearY++) {
+      if (!topLeftColor) {
+        topLeftColor = colorData;
+      }
+
+      for (let nearX = 0; nearX <= NEAR; nearX++) {
+        for (let nearY = 0; nearY <= NEAR; nearY++) {
           if (!(nearX === 0 && nearY === 0)) {
             const nearAbsX = x + nearX;
             const nearAbsY = y + nearY;
@@ -129,7 +126,8 @@ async function extractColorList(input: HTMLImageElement) {
       }
     }
   }
-  return colors;
+
+  return { colors, topLeftColor };
 }
 
 async function process(input: HTMLImageElement, output: HTMLCanvasElement) {
@@ -139,7 +137,7 @@ async function process(input: HTMLImageElement, output: HTMLCanvasElement) {
   const ctx = output.getContext("2d");
 
   console.time("Extract image colors");
-  const colors = await extractColorList(input);
+  const { colors, topLeftColor } = await extractColorList(input);
   console.timeEnd("Extract image colors");
 
   console.time("Sort image colors");
@@ -160,26 +158,25 @@ async function process(input: HTMLImageElement, output: HTMLCanvasElement) {
       );
 
       let color = -1;
-      const index = (x + y * output.width) * 4;
 
       if (x === 0 && y === 0) {
-        color = getRandomItem(colors).color;
+        color = topLeftColor.color;
       } else {
         const nearColors: { x: number; y: number; color: number }[] = [];
-        for (let nearX = -NEAR; nearX <= NEAR; nearX++) {
-          for (let nearY = -NEAR; nearY <= NEAR; nearY++) {
+        for (let nearX = -NEAR; nearX <= 0; nearX++) {
+          for (let nearY = -NEAR; nearY <= 0; nearY++) {
             const nearAbsX = x + nearX;
             const nearAbsY = y + nearY;
+
             if (
               nearAbsX >= 0 &&
-              nearAbsX < output.width &&
               nearAbsY >= 0 &&
-              nearAbsY < output.height &&
-              !(nearAbsY >= y && nearAbsX >= x)
+              nearAbsX <= x &&
+              !(nearAbsY === y && nearAbsX === x)
             ) {
               nearColors.push({
                 x: nearX,
-                y: nearX,
+                y: nearY,
                 color: getPixel(nearAbsX, nearAbsY, {
                   width: output.width,
                   data: dataArray,
@@ -189,45 +186,55 @@ async function process(input: HTMLImageElement, output: HTMLCanvasElement) {
           }
         }
 
-        let nearList: { color: number; count: number }[] = [];
+        let nearList: { color: number; count: number }[][] = [];
         for (const nearColor of nearColors) {
           const colorData = colors.find(
             (colorData) => colorData.color === nearColor.color
           );
-          const list = colorData?.nears
-            .find((near) => near.x === -nearColor.x && near.y === -nearColor.y)
-            ?.colors?.map((colors) => ({
-              ...colors,
-              count: colors.count / Math.abs(nearColor.x * nearColor.y),
-            }));
 
-          if (list) {
-            nearList.push(...list);
+          const list = colorData?.nears.find(
+            (near) => near.x === -nearColor.x && near.y === -nearColor.y
+          )?.colors;
+
+          if (list && list.length > 0) {
+            nearList.push(list);
           }
         }
 
-        nearList = nearList.reduce((list, color) => {
-          const item = list.find((item) => item.color === color.color);
-          if (item) {
-            item.count += color.count;
-          } else {
-            list.push(color);
+        let cleanList = nearList.reduce((fullList, addList, index) => {
+          if (index === 0) {
+            return fullList;
           }
-          return list;
-        }, [] as typeof nearList);
-        nearList.sort(sortColorCount);
+          const newList = fullList
+            .filter((item) => addList.find((it) => item.color === it.color))
+            .map((item) => ({
+              ...item,
+              count:
+                item.count +
+                addList.find((it) => item.color === it.color).count,
+            }));
+          return newList;
+        }, nearList[0]);
 
-        color = getRandomItem(nearList).color;
+        // Fallback if not found
+        if (cleanList.length === 0) {
+          cleanList = nearList.flat(2).reduce((list, color) => {
+            const item = list.find((item) => item.color === color.color);
+            if (item) {
+              item.count += color.count;
+            } else {
+              list.push(color);
+            }
+            return list;
+          }, [] as typeof cleanList);
+        }
+
+        cleanList.sort(sortColorCount);
+
+        color = getRandomItem(cleanList).color;
       }
 
-      // Approximation color
-      // dataArray[index] = (color >> 8) & 0xF
-      // dataArray[index + 1] = (color >> 4) & 0xF
-      // dataArray[index + 2] = (color) & 0xF
-      // dataArray[index + 3] = 0xFF
-
-      // Full color
-
+      const index = (x + y * output.width) * 4;
       dataArray[index] = (color >> 16) & 0xff;
       dataArray[index + 1] = (color >> 8) & 0xff;
       dataArray[index + 2] = color & 0xff;
@@ -239,23 +246,25 @@ async function process(input: HTMLImageElement, output: HTMLCanvasElement) {
   ctx.putImageData(new ImageData(dataArray, output.width), 0, 0);
 }
 
-async function start(input, output) {
-  if (input.complete) {
-    await process(input, output);
-  } else {
-    await new Promise((resolve) => {
-      input.onload = () => resolve(process(input, output));
-    });
-  }
+async function start(src, { width, height }) {
+  const img = document.createElement("img");
+  img.setAttribute("src", src);
+  document.body.appendChild(img);
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  document.body.appendChild(canvas);
+  document.body.appendChild(document.createElement("br"));
+
+  await new Promise((resolve) => {
+    img.onload = () => resolve(process(img, canvas));
+  });
 }
 
 (async () => {
-  await start(
-    document.getElementById("input"),
-    document.getElementById("output")
-  );
-  await start(
-    document.getElementById("input-2"),
-    document.getElementById("output-2")
-  );
+  await start("assets/cave.png", { width: 128, height: 32 });
+  await start("assets/square-2.png", { width: 128, height: 128 });
+  await start("assets/square.png", { width: 32, height: 32 });
+  await start("assets/input-4.png", { width: 128, height: 128 });
+  await start("assets/input-5.png", { width: 128, height: 128 });
 })();

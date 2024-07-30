@@ -46,10 +46,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 var _this = this;
-var DIST = 5;
-var NEAR = 5;
-var ITERATIONS_MAX = 20000;
-var wait = function () { return new Promise(function (resolve) { return requestAnimationFrame(resolve); }); };
+var NEAR = 2;
+// const DIAGONALS = false;
+var REAL_COLOR = false;
 var time = Date.now();
 var pauseIfTooLong = function (callback) { return __awaiter(_this, void 0, void 0, function () {
     var dt;
@@ -84,17 +83,21 @@ function getRandomItem(items) {
 function getPixel(x, y, _a) {
     var width = _a.width, data = _a.data;
     var index = (x + y * width) * 4;
-    // Approximation color
-    return ((((data[index] >> 4) & 0xf) << 20) |
-        (((data[index + 1] >> 4) & 0xf) << 12) |
-        (((data[index + 2] >> 4) & 0xf) << 4));
-    // Full color
-    // return data[index] << 16 | data[index+1] << 8 | data[index+2]
+    if (REAL_COLOR) {
+        // Full color
+        return (data[index] << 16) | (data[index + 1] << 8) | data[index + 2];
+    }
+    else {
+        // Approximation color
+        return ((((data[index] >> 4) & 0xf) << 20) |
+            (((data[index + 1] >> 4) & 0xf) << 12) |
+            (((data[index + 2] >> 4) & 0xf) << 4));
+    }
 }
-function addNear(color, nears, nearX, nearY) {
-    var near = nears.find(function (n) { return n.x === nearX && n.y === nearY; });
+function addNear(color, nears, x, y) {
+    var near = nears.find(function (n) { return n.x === x && n.y === y; });
     if (!near) {
-        near = { x: nearX, y: nearY, colors: [] };
+        near = { x: x, y: y, colors: [] };
         nears.push(near);
     }
     var colorData = near.colors.find(function (data) { return data.color === color; });
@@ -105,19 +108,12 @@ function addNear(color, nears, nearX, nearY) {
         near.colors.push({ color: color, count: 1 });
     }
 }
-function mixRefs(as, bs) {
-    var list = as.filter(function (a) { return bs.find(function (b) { return b.color === a.color; }); });
-    if (list.length === 0) {
-        return as;
-    }
-    return list;
-}
 function sortColorCount(a, b) {
     return b.count - a.count;
 }
 function extractColorList(input) {
     return __awaiter(this, void 0, void 0, function () {
-        var canvas, ctx, imageData, colors, x, _loop_1, y;
+        var canvas, ctx, imageData, colors, topLeftColor, x, _loop_1, y;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -128,10 +124,10 @@ function extractColorList(input) {
                     ctx.drawImage(input, 0, 0);
                     imageData = ctx.getImageData(0, 0, input.width, input.height);
                     colors = [];
-                    x = DIST;
+                    x = 0;
                     _a.label = 1;
                 case 1:
-                    if (!(x < imageData.width - DIST)) return [3 /*break*/, 6];
+                    if (!(x < imageData.width)) return [3 /*break*/, 6];
                     _loop_1 = function (y) {
                         var color, colorData, nearX, nearY, nearAbsX, nearAbsY;
                         return __generator(this, function (_b) {
@@ -152,8 +148,11 @@ function extractColorList(input) {
                                     else {
                                         colorData.count++;
                                     }
-                                    for (nearX = -NEAR; nearX <= NEAR; nearX++) {
-                                        for (nearY = -NEAR; nearY <= NEAR; nearY++) {
+                                    if (!topLeftColor) {
+                                        topLeftColor = colorData;
+                                    }
+                                    for (nearX = 0; nearX <= NEAR; nearX++) {
+                                        for (nearY = 0; nearY <= NEAR; nearY++) {
                                             if (!(nearX === 0 && nearY === 0)) {
                                                 nearAbsX = x + nearX;
                                                 nearAbsY = y + nearY;
@@ -170,10 +169,10 @@ function extractColorList(input) {
                             }
                         });
                     };
-                    y = DIST;
+                    y = 0;
                     _a.label = 2;
                 case 2:
-                    if (!(y < imageData.height - DIST)) return [3 /*break*/, 5];
+                    if (!(y < imageData.height)) return [3 /*break*/, 5];
                     return [5 /*yield**/, _loop_1(y)];
                 case 3:
                     _a.sent();
@@ -184,15 +183,15 @@ function extractColorList(input) {
                 case 5:
                     x++;
                     return [3 /*break*/, 1];
-                case 6: return [2 /*return*/, colors];
+                case 6: return [2 /*return*/, { colors: colors, topLeftColor: topLeftColor }];
             }
         });
     });
 }
 function process(input, output) {
-    var _a, _b;
+    var _a;
     return __awaiter(this, void 0, void 0, function () {
-        var ctx, colors, _i, colors_1, colorData, _c, _d, near, dataArray, y, x, color, index, nearColors, nearX, nearY, nearAbsX, nearAbsY, nearList, _loop_2, _e, nearColors_1, nearColor;
+        var ctx, _b, colors, topLeftColor, _i, colors_1, colorData, _c, _d, near, dataArray, y, x, color, nearColors, nearX, nearY, nearAbsX, nearAbsY, nearList, _loop_2, _e, nearColors_1, nearColor, cleanList, index;
         return __generator(this, function (_f) {
             switch (_f.label) {
                 case 0:
@@ -202,7 +201,7 @@ function process(input, output) {
                     console.time("Extract image colors");
                     return [4 /*yield*/, extractColorList(input)];
                 case 1:
-                    colors = _f.sent();
+                    _b = _f.sent(), colors = _b.colors, topLeftColor = _b.topLeftColor;
                     console.timeEnd("Extract image colors");
                     console.time("Sort image colors");
                     colors.sort(sortColorCount);
@@ -230,24 +229,22 @@ function process(input, output) {
                 case 4:
                     _f.sent();
                     color = -1;
-                    index = (x + y * output.width) * 4;
                     if (x === 0 && y === 0) {
-                        color = getRandomItem(colors).color;
+                        color = topLeftColor.color;
                     }
                     else {
                         nearColors = [];
-                        for (nearX = -NEAR; nearX <= NEAR; nearX++) {
-                            for (nearY = -NEAR; nearY <= NEAR; nearY++) {
+                        for (nearX = -NEAR; nearX <= 0; nearX++) {
+                            for (nearY = -NEAR; nearY <= 0; nearY++) {
                                 nearAbsX = x + nearX;
                                 nearAbsY = y + nearY;
                                 if (nearAbsX >= 0 &&
-                                    nearAbsX < output.width &&
                                     nearAbsY >= 0 &&
-                                    nearAbsY < output.height &&
-                                    !(nearAbsY >= y && nearAbsX >= x)) {
+                                    nearAbsX <= x &&
+                                    !(nearAbsY === y && nearAbsX === x)) {
                                     nearColors.push({
                                         x: nearX,
-                                        y: nearX,
+                                        y: nearY,
                                         color: getPixel(nearAbsX, nearAbsY, {
                                             width: output.width,
                                             data: dataArray
@@ -259,34 +256,42 @@ function process(input, output) {
                         nearList = [];
                         _loop_2 = function (nearColor) {
                             var colorData = colors.find(function (colorData) { return colorData.color === nearColor.color; });
-                            var list = (_b = (_a = colorData === null || colorData === void 0 ? void 0 : colorData.nears.find(function (near) { return near.x === -nearColor.x && near.y === -nearColor.y; })) === null || _a === void 0 ? void 0 : _a.colors) === null || _b === void 0 ? void 0 : _b.map(function (colors) { return (__assign(__assign({}, colors), { count: colors.count / Math.abs(nearColor.x * nearColor.y) })); });
-                            if (list) {
-                                nearList.push.apply(nearList, list);
+                            var list = (_a = colorData === null || colorData === void 0 ? void 0 : colorData.nears.find(function (near) { return near.x === -nearColor.x && near.y === -nearColor.y; })) === null || _a === void 0 ? void 0 : _a.colors;
+                            if (list && list.length > 0) {
+                                nearList.push(list);
                             }
                         };
                         for (_e = 0, nearColors_1 = nearColors; _e < nearColors_1.length; _e++) {
                             nearColor = nearColors_1[_e];
                             _loop_2(nearColor);
                         }
-                        nearList = nearList.reduce(function (list, color) {
-                            var item = list.find(function (item) { return item.color === color.color; });
-                            if (item) {
-                                item.count += color.count;
+                        cleanList = nearList.reduce(function (fullList, addList, index) {
+                            if (index === 0) {
+                                return fullList;
                             }
-                            else {
-                                list.push(color);
-                            }
-                            return list;
-                        }, []);
-                        nearList.sort(sortColorCount);
-                        color = getRandomItem(nearList).color;
+                            var newList = fullList
+                                .filter(function (item) { return addList.find(function (it) { return item.color === it.color; }); })
+                                .map(function (item) { return (__assign(__assign({}, item), { count: item.count +
+                                    addList.find(function (it) { return item.color === it.color; }).count })); });
+                            return newList;
+                        }, nearList[0]);
+                        // Fallback if not found
+                        if (cleanList.length === 0) {
+                            cleanList = nearList.flat(2).reduce(function (list, color) {
+                                var item = list.find(function (item) { return item.color === color.color; });
+                                if (item) {
+                                    item.count += color.count;
+                                }
+                                else {
+                                    list.push(color);
+                                }
+                                return list;
+                            }, []);
+                        }
+                        cleanList.sort(sortColorCount);
+                        color = getRandomItem(cleanList).color;
                     }
-                    // Approximation color
-                    // dataArray[index] = (color >> 8) & 0xF
-                    // dataArray[index + 1] = (color >> 4) & 0xF
-                    // dataArray[index + 2] = (color) & 0xF
-                    // dataArray[index + 3] = 0xFF
-                    // Full color
+                    index = (x + y * output.width) * 4;
                     dataArray[index] = (color >> 16) & 0xff;
                     dataArray[index + 1] = (color >> 8) & 0xff;
                     dataArray[index + 2] = color & 0xff;
@@ -306,23 +311,27 @@ function process(input, output) {
         });
     });
 }
-function start(input, output) {
+function start(src, _a) {
+    var width = _a.width, height = _a.height;
     return __awaiter(this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var img, canvas;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
                 case 0:
-                    if (!input.complete) return [3 /*break*/, 2];
-                    return [4 /*yield*/, process(input, output)];
+                    img = document.createElement("img");
+                    img.setAttribute("src", src);
+                    document.body.appendChild(img);
+                    canvas = document.createElement("canvas");
+                    canvas.width = width;
+                    canvas.height = height;
+                    document.body.appendChild(canvas);
+                    document.body.appendChild(document.createElement("br"));
+                    return [4 /*yield*/, new Promise(function (resolve) {
+                            img.onload = function () { return resolve(process(img, canvas)); };
+                        })];
                 case 1:
-                    _a.sent();
-                    return [3 /*break*/, 4];
-                case 2: return [4 /*yield*/, new Promise(function (resolve) {
-                        input.onload = function () { return resolve(process(input, output)); };
-                    })];
-                case 3:
-                    _a.sent();
-                    _a.label = 4;
-                case 4: return [2 /*return*/];
+                    _b.sent();
+                    return [2 /*return*/];
             }
         });
     });
@@ -330,11 +339,20 @@ function start(input, output) {
 (function () { return __awaiter(_this, void 0, void 0, function () {
     return __generator(this, function (_a) {
         switch (_a.label) {
-            case 0: return [4 /*yield*/, start(document.getElementById("input"), document.getElementById("output"))];
+            case 0: return [4 /*yield*/, start("assets/cave.png", { width: 128, height: 32 })];
             case 1:
                 _a.sent();
-                return [4 /*yield*/, start(document.getElementById("input-2"), document.getElementById("output-2"))];
+                return [4 /*yield*/, start("assets/square-2.png", { width: 128, height: 128 })];
             case 2:
+                _a.sent();
+                return [4 /*yield*/, start("assets/square.png", { width: 32, height: 32 })];
+            case 3:
+                _a.sent();
+                return [4 /*yield*/, start("assets/input-4.png", { width: 128, height: 128 })];
+            case 4:
+                _a.sent();
+                return [4 /*yield*/, start("assets/input-5.png", { width: 128, height: 128 })];
+            case 5:
                 _a.sent();
                 return [2 /*return*/];
         }
