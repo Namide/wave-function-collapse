@@ -26,7 +26,8 @@ const pauseIfTooLong = async (callback?: () => void) => {
 
 function getRandomItem<Item extends { count: number }>(items: Item[]) {
   const rand =
-    Math.random() * items.reduce((total, item) => total + item.count, 0);
+    (1 - Math.random() ** 2) *
+    items.reduce((total, item) => total + item.count, 0);
   let add = 0;
   for (const item of items) {
     if (rand <= add + item.count) {
@@ -240,14 +241,15 @@ async function process(input: HTMLImageElement, output: HTMLCanvasElement) {
 }
 
 async function start(src, { width, height }) {
+  const div = document.createElement("div");
+  document.body.appendChild(div);
   const img = document.createElement("img");
   img.setAttribute("src", src);
-  document.body.appendChild(img);
+  div.appendChild(img);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  document.body.appendChild(canvas);
-  document.body.appendChild(document.createElement("br"));
+  div.appendChild(canvas);
 
   await new Promise((resolve) => {
     img.onload = () => resolve(process(img, canvas));
@@ -258,6 +260,11 @@ async function start(src, { width, height }) {
   await start("assets/cave.png", { width: 128, height: 32 });
   await start("assets/square-2.png", { width: 64, height: 64 });
   await start("assets/square.png", { width: 32, height: 32 });
+  await start("assets/flowers.png", { width: 64, height: 64 });
+  await start("assets/houses.png", { width: 64, height: 64 });
+  await start("assets/infinity.png", { width: 64, height: 64 });
+  await start("assets/triangles.png", { width: 64, height: 64 });
+  await start("assets/wall.png", { width: 64, height: 64 });
   await start("assets/input-4.png", { width: 128, height: 128 });
   await start("assets/input-5.png", { width: 128, height: 128 });
 })();

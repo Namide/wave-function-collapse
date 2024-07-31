@@ -58,7 +58,8 @@ var pauseIfTooLong = function (callback) { return __awaiter(_this, void 0, void 
     });
 }); };
 function getRandomItem(items) {
-    var rand = Math.random() * items.reduce(function (total, item) { return total + item.count; }, 0);
+    var rand = (1 - Math.pow(Math.random(), 2)) *
+        items.reduce(function (total, item) { return total + item.count; }, 0);
     var add = 0;
     for (var _i = 0, items_1 = items; _i < items_1.length; _i++) {
         var item = items_1[_i];
@@ -305,18 +306,19 @@ function process(input, output) {
 function start(src, _a) {
     var width = _a.width, height = _a.height;
     return __awaiter(this, void 0, void 0, function () {
-        var img, canvas;
+        var div, img, canvas;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
+                    div = document.createElement("div");
+                    document.body.appendChild(div);
                     img = document.createElement("img");
                     img.setAttribute("src", src);
-                    document.body.appendChild(img);
+                    div.appendChild(img);
                     canvas = document.createElement("canvas");
                     canvas.width = width;
                     canvas.height = height;
-                    document.body.appendChild(canvas);
-                    document.body.appendChild(document.createElement("br"));
+                    div.appendChild(canvas);
                     return [4 /*yield*/, new Promise(function (resolve) {
                             img.onload = function () { return resolve(process(img, canvas)); };
                         })];
@@ -339,11 +341,26 @@ function start(src, _a) {
                 return [4 /*yield*/, start("assets/square.png", { width: 32, height: 32 })];
             case 3:
                 _a.sent();
-                return [4 /*yield*/, start("assets/input-4.png", { width: 128, height: 128 })];
+                return [4 /*yield*/, start("assets/flowers.png", { width: 64, height: 64 })];
             case 4:
                 _a.sent();
-                return [4 /*yield*/, start("assets/input-5.png", { width: 128, height: 128 })];
+                return [4 /*yield*/, start("assets/houses.png", { width: 64, height: 64 })];
             case 5:
+                _a.sent();
+                return [4 /*yield*/, start("assets/infinity.png", { width: 64, height: 64 })];
+            case 6:
+                _a.sent();
+                return [4 /*yield*/, start("assets/triangles.png", { width: 64, height: 64 })];
+            case 7:
+                _a.sent();
+                return [4 /*yield*/, start("assets/wall.png", { width: 64, height: 64 })];
+            case 8:
+                _a.sent();
+                return [4 /*yield*/, start("assets/input-4.png", { width: 128, height: 128 })];
+            case 9:
+                _a.sent();
+                return [4 /*yield*/, start("assets/input-5.png", { width: 128, height: 128 })];
+            case 10:
                 _a.sent();
                 return [2 /*return*/];
         }
