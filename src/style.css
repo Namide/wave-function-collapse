@@ -1,0 +1,10 @@
+div {
+  display: inline-block;
+  margin: 4px;
+}
+
+img,
+canvas {
+  margin-right: 5px;
+  image-rendering: pixelated;
+}
