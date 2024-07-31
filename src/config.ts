@@ -4,7 +4,7 @@
  * - 2 pixel arround (will check 24 pixels)
  * - ...
  */
-export const NEAR = 2;
+export const NEAR = 3;
 
 /**
  * Use aproximative color or real color.
@@ -20,4 +20,4 @@ export const COLORS_WEIGHT = true;
 /**
  * Number of pass
  */
-export const EXTRA_PASS = 0;
+export const EXTRA_PASS = 10;

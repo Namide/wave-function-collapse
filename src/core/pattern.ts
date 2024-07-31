@@ -5,16 +5,30 @@ export function getPatternColors(
   x: number,
   y: number,
   colorGrid: number[][],
-  { importantBorder }: { importantBorder: boolean }
+  {
+    importantBorder,
+    loopX,
+    loopY,
+  }: {
+    importantBorder: boolean;
+    loopX: boolean;
+    loopY: boolean;
+  }
 ) {
   let patternColors: number[] = [];
+  const imageWidth = colorGrid.length;
+  const imageHeight = colorGrid[0].length;
   for (let nearY = -NEAR; nearY <= NEAR; nearY++) {
     for (let nearX = -NEAR; nearX <= NEAR; nearX++) {
       if (nearX === 0 && nearY === 0) {
         // don't keep central color
       } else {
-        const nearAbsX = x + nearX;
-        const nearAbsY = y + nearY;
+        let nearAbsX = x + nearX;
+        let nearAbsY = y + nearY;
+
+        // Loop to other side
+        nearAbsX = loopX ? (nearAbsX + imageWidth) % imageWidth : nearAbsX;
+        nearAbsY = loopY ? (nearAbsY + imageHeight) % imageHeight : nearAbsY;
 
         // Test all colors
         if (
@@ -67,6 +81,27 @@ export function testPatternColors(
     }
   }
   return true;
+}
+
+export function testPatternScore(patternColors: number[], pattern: Pattern) {
+  let score = 0;
+  const width = NEAR * 2 + 1;
+  const maxDistance = Math.sqrt(NEAR * NEAR + NEAR * NEAR);
+  for (let i = 0; i < patternColors.length; i++) {
+    if (patternColors[i] === pattern.colors[i] && patternColors[i] !== -1) {
+      score++;
+    } else if (patternColors[i] === -1 || pattern.colors[i] === -1) {
+      score++;
+    } else {
+      const nearX = (i % width) - NEAR;
+      const nearY = Math.floor(i / width);
+
+      // 0 = near ; 1 = far
+      const distance = Math.sqrt(nearX * nearX + nearY * nearY) / maxDistance;
+      score -= 1 - distance;
+    }
+  }
+  return score;
 }
 
 export function errasePattern(patternColors: number[]) {

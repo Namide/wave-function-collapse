@@ -68,3 +68,17 @@ export function sortColorCount<Item extends { count: number }>(
 ) {
   return b.count - a.count;
 }
+
+export function uintColorToString(color: number) {
+  return color === -2
+    ? "wall"
+    : color === -1
+    ? "empty"
+    : "#" + color.toString(16);
+}
+
+export function errorToColor(error: number) {
+  return error === 0
+    ? 0x00ff00
+    : 0x000000 + 0x010000 * error * 4 + 0x00ff00 - 0x000100 * error * 4;
+}
