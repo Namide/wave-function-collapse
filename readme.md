@@ -2,9 +2,10 @@
 
 ![Screenshot](./public/screenshot.png)
 
-Test of custom wave function collapse from texture.
+My own test of wave function collapse from texture. I don't use tiles, just texture.  
+[Online demo](https://namide.github.io/wave-function-collapse/)
 
-[namide.github.io/wave-function-collapse](https://namide.github.io/wave-function-collapse/)
+_Input images are from the real WaveFunctionCollapse [github.com/mxgmn/WaveFunctionCollapse](https://github.com/mxgmn/WaveFunctionCollapse)_
 
 ## Requirements
 
