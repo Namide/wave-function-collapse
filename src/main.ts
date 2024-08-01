@@ -1,5 +1,5 @@
 import { NEAR } from "./config";
-import { compareItemCount, uintColorToString } from "./core/helpers";
+import { compareItemCount } from "./core/helpers";
 import { extractColorGrid } from "./core/image";
 import { extractColors, generateColors } from "./core/process";
 import "./style.css";
