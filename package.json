@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc && vite build --base=/wfc/",
+    "build": "tsc && vite build --base=/wave-function-collapse/",
     "preview": "vite preview"
   },
   "devDependencies": {

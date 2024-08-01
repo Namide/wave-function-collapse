@@ -1,8 +1,10 @@
 # Wave Function Collapse
 
-Test of custom wave function collapse on texture.
-
 ![Screenshot](./public/screenshot.png)
+
+Test of custom wave function collapse from texture.
+
+[namide.github.io/wave-function-collapse](https://namide.github.io/wave-function-collapse/)
 
 ## Requirements
 
