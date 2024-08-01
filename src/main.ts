@@ -55,6 +55,8 @@ async function start(
     loopX,
     loopY,
     near,
+    symmetryX,
+    symmetryY,
   }: {
     width: number;
     height: number;
@@ -62,6 +64,8 @@ async function start(
     loopX: boolean;
     loopY: boolean;
     near: number;
+    symmetryX: boolean;
+    symmetryY: boolean;
   }
 ) {
   const div = document.createElement("div");
@@ -98,6 +102,8 @@ async function start(
           loopX,
           loopY,
           near,
+          symmetryX,
+          symmetryY,
         })
       );
     };
@@ -115,6 +121,8 @@ async function start(
     loopX: false,
     loopY: false,
     near: NEAR,
+    symmetryX: true,
+    symmetryY: false,
   });
   await start("assets/square-2.png", {
     width: 64,
@@ -123,6 +131,8 @@ async function start(
     loopX: true,
     loopY: true,
     near: NEAR,
+    symmetryX: true,
+    symmetryY: true,
   });
   await start("assets/square.png", {
     width: 32,
@@ -131,6 +141,8 @@ async function start(
     loopX: true,
     loopY: true,
     near: NEAR,
+    symmetryX: true,
+    symmetryY: true,
   });
   await start("assets/flowers.png", {
     width: 64,
@@ -139,6 +151,8 @@ async function start(
     loopX: false,
     loopY: false,
     near: NEAR,
+    symmetryX: true,
+    symmetryY: false,
   });
   await start("assets/houses.png", {
     width: 64,
@@ -147,6 +161,8 @@ async function start(
     loopX: true,
     loopY: true,
     near: NEAR,
+    symmetryX: true,
+    symmetryY: false,
   });
   await start("assets/infinity.png", {
     width: 64,
@@ -155,6 +171,8 @@ async function start(
     loopX: true,
     loopY: true,
     near: NEAR,
+    symmetryX: false,
+    symmetryY: false,
   });
   await start("assets/triangles.png", {
     width: 64,
@@ -163,6 +181,8 @@ async function start(
     loopX: true,
     loopY: true,
     near: NEAR,
+    symmetryX: true,
+    symmetryY: false,
   });
   await start("assets/wall.png", {
     width: 64,
@@ -171,6 +191,8 @@ async function start(
     loopX: true,
     loopY: true,
     near: NEAR,
+    symmetryX: false,
+    symmetryY: false,
   });
   await start("assets/sand.png", {
     width: 64,
@@ -179,6 +201,8 @@ async function start(
     loopX: false,
     loopY: false,
     near: NEAR,
+    symmetryX: true,
+    symmetryY: false,
   });
   await start("assets/water.png", {
     width: 64,
@@ -187,5 +211,7 @@ async function start(
     loopX: false,
     loopY: false,
     near: NEAR,
+    symmetryX: true,
+    symmetryY: true,
   });
 })();

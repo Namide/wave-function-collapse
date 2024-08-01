@@ -5,7 +5,11 @@ import { calculateErrorMap } from "./error";
 import { extraPass } from "./extraPass";
 import { getRandomItem, getTotalErrors, loop, pauseIfTooLong } from "./helpers";
 import { putGridColorsToImage } from "./image";
-import { addPattern, getPatternColors } from "./pattern";
+import {
+  addPattern,
+  createSymetricPatternColors,
+  getPatternColors,
+} from "./pattern";
 
 /**
  * Extract a list of colors and patterns from a grid
@@ -52,6 +56,27 @@ export async function extractColors(colorGrid: number[][], options: Options) {
 
       const patternColors = getPatternColors(x, y, colorGrid, options);
       addPattern(patternColors, colorData.patterns);
+
+      if (options.symmetryX) {
+        addPattern(
+          createSymetricPatternColors(patternColors, true, false, options),
+          colorData.patterns
+        );
+      }
+
+      if (options.symmetryY) {
+        addPattern(
+          createSymetricPatternColors(patternColors, false, true, options),
+          colorData.patterns
+        );
+      }
+
+      if (options.symmetryX && options.symmetryY) {
+        addPattern(
+          createSymetricPatternColors(patternColors, true, true, options),
+          colorData.patterns
+        );
+      }
     }
   );
   return colors;

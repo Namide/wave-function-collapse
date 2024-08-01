@@ -14,4 +14,6 @@ export type Options = {
   loopX: boolean; // The image is a loop of left and right
   loopY: boolean; // The image is a loop of top and bottom
   near: number; // Distance of colors check
+  symmetryX: boolean; // Can be symetric on x-axis
+  symmetryY: boolean; // Can be symetric on y-axis
 };

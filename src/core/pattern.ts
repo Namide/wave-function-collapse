@@ -49,6 +49,47 @@ export function getPatternColors(
 }
 
 /**
+ * List of colors arround
+ */
+export function createSymetricPatternColors(
+  patternColors: number[],
+  symmetryX: boolean,
+  symmetryY: boolean,
+  options: Options
+) {
+  const infos: { i: number; color: number; x: Number; y: number }[] = [];
+  let i = 0;
+  for (let y = -options.near; y <= options.near; y++) {
+    for (let x = -options.near; x <= options.near; x++) {
+      if (x === 0 && y === 0) {
+        // don't keep central color
+      } else {
+        infos.push({ i, x, y, color: patternColors[i] });
+        i++;
+      }
+    }
+  }
+
+  let newPatternColors: number[] = [];
+  for (let y = -options.near; y <= options.near; y++) {
+    for (let x = -options.near; x <= options.near; x++) {
+      if (x === 0 && y === 0) {
+        // don't keep central color
+      } else {
+        const otherX = symmetryX ? -x : x;
+        const otherY = symmetryY ? -y : y;
+
+        newPatternColors.push(
+          infos.find((info) => info.x === otherX && info.y === otherY)!.color
+        );
+      }
+    }
+  }
+
+  return newPatternColors;
+}
+
+/**
  * Add pattern to list if not exist
  */
 export function addPattern(patternColors: number[], patterns: Pattern[]) {
