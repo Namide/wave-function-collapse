@@ -1,3 +1,4 @@
+# Node environment
 code:
 	docker run -ti --rm \
 		-v $(shell pwd)\:/usr/src/app \
@@ -8,6 +9,7 @@ code:
 		node \
 		bash
 
+# Install dependencies
 install:
 	docker run -ti --rm \
 		-u "node" \
@@ -16,6 +18,7 @@ install:
 		node \
 		npm install
 
+# Run dev server and auto lauch browser
 dev:
 	(sleep 2 && python3 -m webbrowser http://localhost:8456/) &
 	docker run -ti --rm \
@@ -26,6 +29,7 @@ dev:
 		node \
 		npm run dev
 
+# Build bundle
 build:
 	docker run -ti --rm \
 		-u "node" \

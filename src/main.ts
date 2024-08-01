@@ -1,39 +1,13 @@
 import { NEAR } from "./config";
-import {
-  pauseIfTooLong,
-  sortColorCount,
-  uintColorToString,
-} from "./core/helpers";
-import { getPixel } from "./core/image";
+import { compareItemCount, uintColorToString } from "./core/helpers";
+import { extractColorGrid } from "./core/image";
 import { extractColors, generateColors } from "./core/process";
 import "./style.css";
 import type { Options } from "./types";
 
-async function extractColorGrid(input: HTMLImageElement) {
-  const canvas = document.createElement("canvas");
-  canvas.width = input.naturalWidth;
-  canvas.height = input.naturalHeight;
-  const outputCtx = canvas.getContext("2d") as CanvasRenderingContext2D;
-  outputCtx.drawImage(input, 0, 0);
-  const imageData = outputCtx.getImageData(
-    0,
-    0,
-    input.naturalWidth,
-    input.naturalHeight
-  );
-
-  const colorGrid: number[][] = [];
-  for (let x = 0; x < imageData.width; x++) {
-    colorGrid[x] = [];
-    for (let y = 0; y < imageData.height; y++) {
-      await pauseIfTooLong();
-      colorGrid[x][y] = getPixel(x, y, imageData);
-    }
-  }
-
-  return colorGrid;
-}
-
+/**
+ * Launch all calculations
+ */
 async function fullProcess(
   input: HTMLImageElement,
   output: HTMLCanvasElement,
@@ -61,10 +35,7 @@ async function fullProcess(
   );
 
   console.time("Sort image colors");
-  colors.sort(sortColorCount);
-  // for (const colorData of colors) {
-  //   colorData.patterns.sort(sortColorCount);
-  // }
+  colors.sort(compareItemCount);
   console.timeEnd("Sort image colors");
 
   console.time("Generate image colors");
@@ -133,6 +104,9 @@ async function start(
   });
 }
 
+/**
+ * All images and configuration for each image
+ */
 (async () => {
   await start("assets/cave.png", {
     width: 72,

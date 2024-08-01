@@ -21,6 +21,6 @@ export const COLOR_ACCURACY: 1 | 8 | 16 = 8;
 export const COLORS_WEIGHT = true;
 
 /**
- * Number of pass
+ * Number of pass to clean the image
  */
 export const MAX_EXTRA_PASS = 10;

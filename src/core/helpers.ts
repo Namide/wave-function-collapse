@@ -93,6 +93,9 @@ export async function loop(
   }
 }
 
+/**
+ * Get random item of list depends on each weight (each item need count property)
+ */
 export function getRandomItem<Item extends { count: number }>(items: Item[]) {
   if (COLORS_WEIGHT) {
     // Keep proportions
@@ -112,13 +115,19 @@ export function getRandomItem<Item extends { count: number }>(items: Item[]) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-export function sortColorCount<Item extends { count: number }>(
+/**
+ * Compare 2 items by count property
+ */
+export function compareItemCount<Item extends { count: number }>(
   a: Item,
   b: Item
 ) {
   return b.count - a.count;
 }
 
+/**
+ * Display human readable color from number
+ */
 export function uintColorToString(color: number) {
   return color === -2
     ? "wall"
@@ -127,12 +136,18 @@ export function uintColorToString(color: number) {
     : "#" + color.toString(16);
 }
 
+/**
+ * Transform error count to uint color
+ */
 export function errorToColor(error: number) {
   return error === 0
     ? 0x00ff00
     : 0x000000 + 0x010000 * error * 4 + 0x00ff00 - 0x000100 * error * 4;
 }
 
+/**
+ * Get total errors from error map
+ */
 export function getTotalErrors(errorMap: number[][]) {
   return errorMap.flat(2).reduce((total, count) => total + count, 0);
 }

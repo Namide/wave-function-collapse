@@ -1,8 +1,12 @@
 import { Color, Options } from "../types";
 import { errorToColor, loop, pauseIfTooLong } from "./helpers";
 import { putGridColorsToImage } from "./image";
-import { getPatternColors, testPatternScore } from "./pattern";
+import { getPatternColors, getPatternScore } from "./pattern";
 
+/**
+ * Calculate a grid of errors levels.
+ * Errors is bad near pixels.
+ */
 export async function calculateErrorMap(
   newColorGrid: number[][],
   errorGrid: number[][],
@@ -24,13 +28,11 @@ export async function calculateErrorMap(
         );
       });
 
-      // const newColor = newColorGrid[x][y];
       const newPattern = getPatternColors(x, y, newColorGrid, options);
-      // const colorData = colors.find(c => c.color === newColor) as Color
 
       let filteredColors = colors.map(({ patterns }) => {
         const patternData = patterns.map((pattern) => {
-          const score = testPatternScore(newPattern, pattern);
+          const score = getPatternScore(newPattern, pattern);
           return {
             score,
             count: pattern.count,
@@ -55,38 +57,3 @@ export async function calculateErrorMap(
     errorCtx
   );
 }
-
-// export function setErrorsOnMap(
-//   errorsMap: number[][],
-//   newColorGrid: number[][],
-//   x: number,
-//   y: number,
-//   power: number,
-//   options: Options
-// ) {
-//   for (let nearX = -options.near; nearX <= options.near; nearX++) {
-//     for (let nearY = -options.near; nearY <= options.near; nearY++) {
-//       if (nearX === 0 && nearY === 0) {
-//         errorsMap[x][y] = 1;
-//       } else {
-//         const nearAbsX = x + nearX;
-//         const nearAbsY = y + nearY;
-
-//         // Test all colors
-//         if (
-//           nearAbsX < 0 ||
-//           nearAbsX >= newColorGrid.length ||
-//           nearAbsY < 0 ||
-//           nearAbsY >= newColorGrid[x].length
-//         ) {
-//           // Out of the screen
-//         } else {
-//           // Get color for pattern
-//           if (newColorGrid[nearAbsX][nearAbsY] > -1) {
-//             errorsMap[nearAbsX][nearAbsY]++;
-//           }
-//         }
-//       }
-//     }
-//   }
-// }

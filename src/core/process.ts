@@ -7,6 +7,9 @@ import { getRandomItem, getTotalErrors, loop, pauseIfTooLong } from "./helpers";
 import { putGridColorsToImage } from "./image";
 import { addPattern, getPatternColors } from "./pattern";
 
+/**
+ * Extract a list of colors and patterns from a grid
+ */
 export async function extractColors(colorGrid: number[][], options: Options) {
   const colors: Color[] = [];
   await loop(
@@ -33,6 +36,7 @@ export async function extractColors(colorGrid: number[][], options: Options) {
       }
 
       await pauseIfTooLong();
+
       const color = colorGrid[x][y];
       let colorData = colors.find((data) => data.color === color);
       if (!colorData) {
@@ -53,6 +57,9 @@ export async function extractColors(colorGrid: number[][], options: Options) {
   return colors;
 }
 
+/**
+ * Generate all grid of pixels
+ */
 export async function generateColors(
   output: HTMLCanvasElement,
   errors: HTMLCanvasElement,
@@ -88,15 +95,7 @@ export async function generateColors(
         color = getRandomItem(colors).color;
       }
     } else {
-      color = searchBestColor(
-        x,
-        y,
-        colors,
-        newColorGrid,
-        // errorsMap,
-        true,
-        options
-      );
+      color = searchBestColor(x, y, colors, newColorGrid, options);
     }
 
     newColorGrid[x][y] = color;
@@ -117,10 +116,6 @@ export async function generateColors(
     await extraPass(outputCtx, colors, newColorGrid, errorsMap, options);
 
     putGridColorsToImage(newColorGrid, outputCtx);
-    // putGridColorsToImage(
-    //   errorsMap.map((line) => line.map(errorToColor)),
-    //   errorsCtx
-    // );
 
     await calculateErrorMap(newColorGrid, errorsMap, colors, errorsCtx, {
       ...options,

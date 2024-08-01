@@ -1,6 +1,9 @@
 import { NEAR } from "../config";
 import type { Options, Pattern } from "../types";
 
+/**
+ * List of colors arround
+ */
 export function getPatternColors(
   x: number,
   y: number,
@@ -45,6 +48,9 @@ export function getPatternColors(
   return patternColors;
 }
 
+/**
+ * Add pattern to list if not exist
+ */
 export function addPattern(patternColors: number[], patterns: Pattern[]) {
   let near = patterns.find((pattern) =>
     testPatternColors(patternColors, pattern, true)
@@ -57,6 +63,9 @@ export function addPattern(patternColors: number[], patterns: Pattern[]) {
   }
 }
 
+/**
+ * Check patters similarities
+ */
 export function testPatternColors(
   patternColors: number[],
   pattern: Pattern,
@@ -79,7 +88,10 @@ export function testPatternColors(
   return true;
 }
 
-export function testPatternScore(patternColors: number[], pattern: Pattern) {
+/**
+ * Big score between patterns is similar patterns.
+ */
+export function getPatternScore(patternColors: number[], pattern: Pattern) {
   let score = 0;
   const width = NEAR * 2 + 1;
   const maxDistance = Math.sqrt(NEAR * NEAR + NEAR * NEAR);
@@ -100,7 +112,10 @@ export function testPatternScore(patternColors: number[], pattern: Pattern) {
   return score;
 }
 
-export function errasePattern(patternColors: number[]) {
+/**
+ * Remove 1 far color from pattern
+ */
+export function errodePattern(patternColors: number[]) {
   let patternData: { color: number; distance: number; index: number }[] = [];
   let index = 0;
   for (let nearX = -NEAR; nearX <= NEAR; nearX++) {

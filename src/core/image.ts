@@ -1,5 +1,9 @@
 import { COLOR_ACCURACY } from "../config";
+import { pauseIfTooLong } from "./helpers";
 
+/**
+ * Get pixel from ImageData
+ */
 export function getPixel(
   x: number,
   y: number,
@@ -28,6 +32,9 @@ export function getPixel(
   }
 }
 
+/**
+ * Display image from grids to canvas
+ */
 export function putGridColorsToImage(
   gridColors: number[][],
   outputCtx: CanvasRenderingContext2D
@@ -48,4 +55,32 @@ export function putGridColorsToImage(
   }
 
   outputCtx.putImageData(new ImageData(dataArray, width), 0, 0);
+}
+
+/**
+ * Convert image to a grid of colors
+ */
+export async function extractColorGrid(input: HTMLImageElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = input.naturalWidth;
+  canvas.height = input.naturalHeight;
+  const outputCtx = canvas.getContext("2d") as CanvasRenderingContext2D;
+  outputCtx.drawImage(input, 0, 0);
+  const imageData = outputCtx.getImageData(
+    0,
+    0,
+    input.naturalWidth,
+    input.naturalHeight
+  );
+
+  const colorGrid: number[][] = [];
+  for (let x = 0; x < imageData.width; x++) {
+    colorGrid[x] = [];
+    for (let y = 0; y < imageData.height; y++) {
+      await pauseIfTooLong();
+      colorGrid[x][y] = getPixel(x, y, imageData);
+    }
+  }
+
+  return colorGrid;
 }
