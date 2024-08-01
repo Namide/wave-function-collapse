@@ -1,25 +1,17 @@
 import { NEAR } from "../config";
-import type { Pattern } from "../types";
+import type { Options, Pattern } from "../types";
 
 export function getPatternColors(
   x: number,
   y: number,
   colorGrid: number[][],
-  {
-    importantBorder,
-    loopX,
-    loopY,
-  }: {
-    importantBorder: boolean;
-    loopX: boolean;
-    loopY: boolean;
-  }
+  options: Options
 ) {
   let patternColors: number[] = [];
   const imageWidth = colorGrid.length;
   const imageHeight = colorGrid[0].length;
-  for (let nearY = -NEAR; nearY <= NEAR; nearY++) {
-    for (let nearX = -NEAR; nearX <= NEAR; nearX++) {
+  for (let nearY = -options.near; nearY <= options.near; nearY++) {
+    for (let nearX = -options.near; nearX <= options.near; nearX++) {
       if (nearX === 0 && nearY === 0) {
         // don't keep central color
       } else {
@@ -27,8 +19,12 @@ export function getPatternColors(
         let nearAbsY = y + nearY;
 
         // Loop to other side
-        nearAbsX = loopX ? (nearAbsX + imageWidth) % imageWidth : nearAbsX;
-        nearAbsY = loopY ? (nearAbsY + imageHeight) % imageHeight : nearAbsY;
+        nearAbsX = options.loopX
+          ? (nearAbsX + imageWidth) % imageWidth
+          : nearAbsX;
+        nearAbsY = options.loopY
+          ? (nearAbsY + imageHeight) % imageHeight
+          : nearAbsY;
 
         // Test all colors
         if (
@@ -38,7 +34,7 @@ export function getPatternColors(
           nearAbsY >= colorGrid[nearAbsX].length
         ) {
           // Out of the screen
-          patternColors.push(importantBorder ? -2 : -1);
+          patternColors.push(options.importantBorder ? -2 : -1);
         } else {
           // Get color for pattern
           patternColors.push(colorGrid[nearAbsX][nearAbsY]);

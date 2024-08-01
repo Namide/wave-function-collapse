@@ -1,4 +1,4 @@
-import { REAL_COLOR } from "../config";
+import { COLOR_ACCURACY } from "../config";
 
 export function getPixel(
   x: number,
@@ -7,16 +7,24 @@ export function getPixel(
 ) {
   const index = (x + y * width) * 4;
 
-  if (REAL_COLOR) {
-    // Full color
-    return (data[index] << 16) | (data[index + 1] << 8) | data[index + 2];
-  } else {
-    // Approximation color
-    return (
-      (((data[index] >> 4) & 0xf) << 20) |
-      (((data[index + 1] >> 4) & 0xf) << 12) |
-      (((data[index + 2] >> 4) & 0xf) << 4)
-    );
+  switch (COLOR_ACCURACY) {
+    case 1:
+      // Full color
+      return (data[index] << 16) | (data[index + 1] << 8) | data[index + 2];
+    case 8:
+      // Big approximation color #FFFFFF => #1F1F1F (x8)
+      return (
+        (((data[index] >> 3) & 0x1f) << 19) |
+        (((data[index + 1] >> 3) & 0x1f) << 11) |
+        (((data[index + 2] >> 3) & 0x1f) << 3)
+      );
+    case 16:
+      // Big approximation color #FFFFFF => #FFF (x16)
+      return (
+        (((data[index] >> 4) & 0xf) << 20) |
+        (((data[index + 1] >> 4) & 0xf) << 12) |
+        (((data[index + 2] >> 4) & 0xf) << 4)
+      );
   }
 }
 

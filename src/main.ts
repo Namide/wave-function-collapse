@@ -1,235 +1,13 @@
-import { EXTRA_PASS, NEAR } from "./config";
-import { searchBestColor } from "./core/color";
-import { calculateErrorMap } from "./core/error";
+import { NEAR } from "./config";
 import {
-  getRandomItem,
-  loop,
   pauseIfTooLong,
   sortColorCount,
   uintColorToString,
 } from "./core/helpers";
-import { getPixel, putGridColorsToImage } from "./core/image";
-import { addPattern, getPatternColors } from "./core/pattern";
+import { getPixel } from "./core/image";
+import { extractColors, generateColors } from "./core/process";
 import "./style.css";
-import type { Color } from "./types";
-
-async function extractColors(
-  colorGrid: number[][],
-  importantBorder: boolean,
-  loopX: boolean,
-  loopY: boolean
-) {
-  const colors: Color[] = [];
-  await loop(
-    colorGrid.length,
-    colorGrid[0].length,
-    "lt",
-    async (x: number, y: number) => {
-      // Avoid some pixels tests
-      if (
-        !importantBorder &&
-        !loopX &&
-        (x < NEAR || x > colorGrid.length - NEAR)
-      ) {
-        return;
-      }
-
-      // Avoid some pixels tests
-      if (
-        !importantBorder &&
-        !loopY &&
-        (y < NEAR || y > colorGrid[0].length - NEAR)
-      ) {
-        return;
-      }
-
-      await pauseIfTooLong();
-      const color = colorGrid[x][y];
-      let colorData = colors.find((data) => data.color === color);
-      if (!colorData) {
-        colorData = {
-          color,
-          count: 1,
-          patterns: [],
-        };
-        colors.push(colorData);
-      } else {
-        colorData.count++;
-      }
-
-      const patternColors = getPatternColors(x, y, colorGrid, {
-        importantBorder,
-        loopX,
-        loopY,
-      });
-      addPattern(patternColors, colorData.patterns);
-    }
-  );
-  return colors;
-}
-
-async function extraPass(
-  outputCtx: CanvasRenderingContext2D,
-  colors: Color[],
-  importantBorder: boolean,
-  newColorGrid: number[][],
-  errorsMap: number[][],
-  loopX: boolean,
-  loopY: boolean
-) {
-  // const newErrorsMap: number[][] = new Array(errorsMap.length).fill([]);
-  // for (let x = 0; x < errorsMap.length; x++) {
-  //   newErrorsMap[x] = new Array(errorsMap[x].length).fill(0);
-  // }
-
-  const ONLY_ERRORS = true;
-  if (ONLY_ERRORS) {
-    // let maxError = 0;
-    let sortedErrors: { x: number; y: number; count: number }[] = [];
-    for (let x = 0; x < errorsMap.length; x++) {
-      for (let y = 0; y < errorsMap[x].length; y++) {
-        const count = errorsMap[x][y];
-        if (count > 0) {
-          sortedErrors.push({ x, y, count });
-          // maxError = Math.max(maxError, count);
-        }
-      }
-    }
-    sortedErrors.sort(sortColorCount);
-    for (const { x, y } of sortedErrors) {
-      await pauseIfTooLong(() => {
-        putGridColorsToImage(newColorGrid, outputCtx);
-      });
-
-      newColorGrid[x][y] = searchBestColor(
-        x,
-        y,
-        colors,
-        newColorGrid,
-        // newErrorsMap,
-        importantBorder,
-        false,
-        loopX,
-        loopY
-      );
-    }
-  } else {
-    for (let y = newColorGrid[0].length - 1; y > -1; y--) {
-      for (let x = newColorGrid.length - 1; x > -1; x--) {
-        await pauseIfTooLong(() => {
-          putGridColorsToImage(newColorGrid, outputCtx);
-        });
-
-        // if (errorsMap[x][y] > 5) {
-        newColorGrid[x][y] = searchBestColor(
-          x,
-          y,
-          colors,
-          newColorGrid,
-          // newErrorsMap,
-          importantBorder,
-          true,
-          loopX,
-          loopY
-        );
-        // }
-      }
-    }
-  }
-
-  // Update error map
-  // for (let x = 0; x < errorsMap.length; x++) {
-  //   errorsMap[x] = newErrorsMap[x];
-  // }
-}
-
-function getTotalErrors(errorMap: number[][]) {
-  return errorMap.flat(2).reduce((total, count) => total + count, 0);
-}
-
-async function generateColors(
-  output: HTMLCanvasElement,
-  errors: HTMLCanvasElement,
-  colors: Color[],
-  colorGrid: number[][],
-  importantBorder: boolean,
-  loopX: boolean,
-  loopY: boolean
-) {
-  const outputCtx = output.getContext("2d") as CanvasRenderingContext2D;
-  const errorsCtx = errors.getContext("2d") as CanvasRenderingContext2D;
-
-  const newColorGrid: number[][] = new Array(output.width).fill([]);
-  const errorsMap: number[][] = new Array(output.width).fill([]);
-
-  for (let x = 0; x < output.width; x++) {
-    newColorGrid[x] = new Array(output.height).fill(-1);
-    errorsMap[x] = new Array(output.height).fill(0);
-  }
-
-  await loop(output.width, output.height, "rb", async (x, y, isFirst) => {
-    await pauseIfTooLong(() => {
-      putGridColorsToImage(newColorGrid, outputCtx);
-    });
-
-    let color = -1;
-    if (isFirst) {
-      color = importantBorder ? colorGrid[x][y] : getRandomItem(colors).color;
-    } else {
-      color = searchBestColor(
-        x,
-        y,
-        colors,
-        newColorGrid,
-        // errorsMap,
-        importantBorder,
-        true,
-        loopX,
-        loopY
-      );
-    }
-
-    newColorGrid[x][y] = color;
-  });
-
-  putGridColorsToImage(newColorGrid, outputCtx);
-
-  await calculateErrorMap(newColorGrid, errorsMap, colors, errorsCtx, {
-    importantBorder,
-    loopX,
-    loopY,
-  });
-
-  let totalErrors = getTotalErrors(errorsMap);
-  console.log("totalErrors:", totalErrors);
-
-  for (let num = 0; num < EXTRA_PASS && totalErrors > 0; num++) {
-    await extraPass(
-      outputCtx,
-      colors,
-      importantBorder,
-      newColorGrid,
-      errorsMap,
-      loopX,
-      loopY
-    );
-
-    putGridColorsToImage(newColorGrid, outputCtx);
-    // putGridColorsToImage(
-    //   errorsMap.map((line) => line.map(errorToColor)),
-    //   errorsCtx
-    // );
-
-    await calculateErrorMap(newColorGrid, errorsMap, colors, errorsCtx, {
-      importantBorder,
-      loopX,
-      loopY,
-    });
-
-    totalErrors = getTotalErrors(errorsMap);
-    console.log("cleaned totalErrors:", totalErrors);
-  }
-}
+import type { Options } from "./types";
 
 async function extractColorGrid(input: HTMLImageElement) {
   const canvas = document.createElement("canvas");
@@ -260,16 +38,14 @@ async function fullProcess(
   input: HTMLImageElement,
   output: HTMLCanvasElement,
   errors: HTMLCanvasElement,
-  importantBorder: boolean,
-  loopX: boolean,
-  loopY: boolean
+  options: Options
 ) {
   console.time("Extract grid colors");
   const colorGrid = await extractColorGrid(input);
   console.timeEnd("Extract grid colors");
 
   console.time("Extract image colors");
-  const colors = await extractColors(colorGrid, importantBorder, loopX, loopY);
+  const colors = await extractColors(colorGrid, options);
   console.timeEnd("Extract image colors");
 
   console.log("Colors");
@@ -292,15 +68,7 @@ async function fullProcess(
   console.timeEnd("Sort image colors");
 
   console.time("Generate image colors");
-  await generateColors(
-    output,
-    errors,
-    colors,
-    colorGrid,
-    importantBorder,
-    loopX,
-    loopY
-  );
+  await generateColors(output, errors, colors, colorGrid, options);
   console.timeEnd("Generate image colors");
 }
 
@@ -315,12 +83,14 @@ async function start(
     importantBorder,
     loopX,
     loopY,
+    near,
   }: {
     width: number;
     height: number;
     importantBorder: boolean;
     loopX: boolean;
     loopY: boolean;
+    near: number;
   }
 ) {
   const div = document.createElement("div");
@@ -351,7 +121,14 @@ async function start(
         "style",
         `width: ${img.width * 4}px; height: ${img.height * 4}px;`
       );
-      resolve(fullProcess(img, output, errors, importantBorder, loopX, loopY));
+      resolve(
+        fullProcess(img, output, errors, {
+          importantBorder,
+          loopX,
+          loopY,
+          near,
+        })
+      );
     };
   });
 }
@@ -361,8 +138,9 @@ async function start(
     width: 72,
     height: 42,
     importantBorder: true,
-    loopX: true,
+    loopX: false,
     loopY: false,
+    near: NEAR,
   });
   await start("assets/square-2.png", {
     width: 64,
@@ -370,6 +148,7 @@ async function start(
     importantBorder: false,
     loopX: true,
     loopY: true,
+    near: NEAR,
   });
   await start("assets/square.png", {
     width: 32,
@@ -377,6 +156,7 @@ async function start(
     importantBorder: false,
     loopX: true,
     loopY: true,
+    near: NEAR,
   });
   await start("assets/flowers.png", {
     width: 64,
@@ -384,6 +164,7 @@ async function start(
     importantBorder: true,
     loopX: false,
     loopY: false,
+    near: NEAR,
   });
   await start("assets/houses.png", {
     width: 64,
@@ -391,6 +172,7 @@ async function start(
     importantBorder: false,
     loopX: true,
     loopY: true,
+    near: NEAR,
   });
   await start("assets/infinity.png", {
     width: 64,
@@ -398,6 +180,7 @@ async function start(
     importantBorder: false,
     loopX: true,
     loopY: true,
+    near: NEAR,
   });
   await start("assets/triangles.png", {
     width: 64,
@@ -405,6 +188,7 @@ async function start(
     importantBorder: false,
     loopX: true,
     loopY: true,
+    near: NEAR,
   });
   await start("assets/wall.png", {
     width: 64,
@@ -412,19 +196,22 @@ async function start(
     importantBorder: false,
     loopX: true,
     loopY: true,
+    near: NEAR,
   });
-  await start("assets/input-4.png", {
+  await start("assets/sand.png", {
+    width: 64,
+    height: 128,
+    importantBorder: false,
+    loopX: false,
+    loopY: false,
+    near: NEAR,
+  });
+  await start("assets/water.png", {
     width: 64,
     height: 64,
     importantBorder: false,
     loopX: false,
     loopY: false,
-  });
-  await start("assets/input-5.png", {
-    width: 64,
-    height: 64,
-    importantBorder: false,
-    loopX: false,
-    loopY: false,
+    near: NEAR,
   });
 })();

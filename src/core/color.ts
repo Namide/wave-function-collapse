@@ -1,13 +1,6 @@
-import { NEAR } from "../config";
-import type { Color } from "../types";
-import { setErrorsOnMap } from "./error";
+import type { Color, Options } from "../types";
 import { getRandomItem, sortColorCount } from "./helpers";
-import {
-  errasePattern,
-  getPatternColors,
-  testPatternColors,
-  testPatternScore,
-} from "./pattern";
+import { getPatternColors, testPatternScore } from "./pattern";
 
 export function searchBestColor(
   x: number,
@@ -15,17 +8,11 @@ export function searchBestColor(
   colors: Color[],
   newColorGrid: number[][],
   // errorsMap: number[][],
-  importantBorder: boolean,
   retry: boolean,
-  loopX: boolean,
-  loopY: boolean
+  options: Options
 ) {
   // Get current pattern
-  let patternColors = getPatternColors(x, y, newColorGrid, {
-    importantBorder,
-    loopX,
-    loopY,
-  });
+  let patternColors = getPatternColors(x, y, newColorGrid, options);
 
   // Get all colors with this pattern
   let filteredColors = colors.map(({ color, count, patterns }) => {

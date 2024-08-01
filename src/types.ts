@@ -8,3 +8,10 @@ export type Pattern = {
   colors: number[]; // square colors
   count: number;
 };
+
+export type Options = {
+  importantBorder: boolean;
+  loopX: boolean;
+  loopY: boolean;
+  near: number;
+};

@@ -8,9 +8,12 @@ export const NEAR = 3;
 
 /**
  * Use aproximative color or real color.
- * Can not use real color if too mush colors in image
+ * Can not use real color if too mush colors in image.
+ * - 1 = real color
+ * - 8 = 8x less colors
+ * - 16 = 16x less colors (#FFFFFF => #FFF)
  */
-export const REAL_COLOR = false;
+export const COLOR_ACCURACY: 1 | 8 | 16 = 8;
 
 /**
  * Disable colors proportions
@@ -20,4 +23,4 @@ export const COLORS_WEIGHT = true;
 /**
  * Number of pass
  */
-export const EXTRA_PASS = 10;
+export const MAX_EXTRA_PASS = 10;
