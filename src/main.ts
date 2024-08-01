@@ -22,18 +22,6 @@ async function fullProcess(
   const colors = await extractColors(colorGrid, options);
   console.timeEnd("Extract image colors");
 
-  console.log("Colors");
-  console.log(
-    colors.map(({ color, count, patterns }) => ({
-      color: uintColorToString(color),
-      count,
-      patterns: patterns.map(({ colors, count }) => ({
-        count,
-        colors: colors.map((color) => uintColorToString(color)),
-      })),
-    }))
-  );
-
   console.time("Sort image colors");
   colors.sort(compareItemCount);
   console.timeEnd("Sort image colors");
@@ -178,8 +166,8 @@ async function start(
     width: 64,
     height: 64,
     importantBorder: false,
-    loopX: true,
-    loopY: true,
+    loopX: false,
+    loopY: false,
     near: NEAR,
     symmetryX: true,
     symmetryY: false,

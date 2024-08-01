@@ -24,3 +24,8 @@ export const COLORS_WEIGHT = true;
  * Number of pass to clean the image
  */
 export const MAX_EXTRA_PASS = 10;
+
+/**
+ * Change near for each pass
+ */
+export const COMPLEX_EXTRA_PASS = false;

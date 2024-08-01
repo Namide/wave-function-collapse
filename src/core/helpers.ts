@@ -142,7 +142,10 @@ export function uintColorToString(color: number) {
 export function errorToColor(error: number) {
   return error === 0
     ? 0x00ff00
-    : 0x000000 + 0x010000 * error * 4 + 0x00ff00 - 0x000100 * error * 4;
+    : Math.min(
+        0xff0000,
+        0x000000 + 0x010000 * error * 10 + 0x00ff00 - 0x000100 * error * 10
+      );
 }
 
 /**

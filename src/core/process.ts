@@ -1,4 +1,4 @@
-import { MAX_EXTRA_PASS } from "../config";
+import { COMPLEX_EXTRA_PASS, MAX_EXTRA_PASS } from "../config";
 import type { Color, Options } from "../types";
 import { searchBestColor } from "./color";
 import { calculateErrorMap } from "./error";
@@ -128,26 +128,91 @@ export async function generateColors(
 
   putGridColorsToImage(newColorGrid, outputCtx);
 
-  await calculateErrorMap(newColorGrid, errorsMap, colors, errorsCtx, {
-    ...options,
-    near: 1,
-  });
+  if (!COMPLEX_EXTRA_PASS && MAX_EXTRA_PASS > 0) {
+    await calculateErrorMap(
+      newColorGrid,
+      errorsMap,
+      colors,
+      errorsCtx,
+      options
+    );
 
-  let totalErrors = getTotalErrors(errorsMap);
-  console.log("totalErrors:", totalErrors);
+    let totalErrors = getTotalErrors(errorsMap);
+    console.log("totalErrors:", totalErrors);
 
-  for (let num = 0; num < MAX_EXTRA_PASS && totalErrors > 10; num++) {
-    const near = (num % 3) + 1;
-    await extraPass(outputCtx, colors, newColorGrid, errorsMap, options);
+    for (let num = 0; num < MAX_EXTRA_PASS && totalErrors > 10; num++) {
+      await extraPass(outputCtx, colors, newColorGrid, errorsMap, options);
 
-    putGridColorsToImage(newColorGrid, outputCtx);
+      putGridColorsToImage(newColorGrid, outputCtx);
 
-    await calculateErrorMap(newColorGrid, errorsMap, colors, errorsCtx, {
-      ...options,
-      near,
-    });
+      await calculateErrorMap(
+        newColorGrid,
+        errorsMap,
+        colors,
+        errorsCtx,
+        options
+      );
 
-    totalErrors = getTotalErrors(errorsMap);
-    console.log("cleaned totalErrors:", totalErrors, "near:", near);
+      const newTotalErrors = getTotalErrors(errorsMap);
+      console.log("cleaned totalErrors:", newTotalErrors);
+      if (newTotalErrors === totalErrors) {
+        console.log("same errors number, breack extra passes");
+      }
+      totalErrors = newTotalErrors;
+    }
+  }
+
+  if (COMPLEX_EXTRA_PASS && MAX_EXTRA_PASS > 0) {
+    const maxNear = Math.min(options.near, 2);
+
+    const colorsList: Color[][] = [[]];
+    for (let near = 1; near <= maxNear; near++) {
+      if (near === options.near) {
+        colorsList[near] = colors;
+      } else {
+        colorsList[near] = await extractColors(colorGrid, {
+          ...options,
+          near,
+        });
+      }
+    }
+
+    let near = 1;
+    await calculateErrorMap(
+      newColorGrid,
+      errorsMap,
+      colorsList[near],
+      errorsCtx,
+      {
+        ...options,
+        near,
+      }
+    );
+
+    let totalErrors = getTotalErrors(errorsMap);
+    console.log("totalErrors:", totalErrors);
+
+    for (let num = 0; num < MAX_EXTRA_PASS && totalErrors > 10; num++) {
+      near = Math.min((num % maxNear) + 1, options.near);
+
+      await extraPass(outputCtx, colorsList[near], newColorGrid, errorsMap, {
+        ...options,
+        near,
+      });
+
+      putGridColorsToImage(newColorGrid, outputCtx);
+
+      await calculateErrorMap(newColorGrid, errorsMap, colors, errorsCtx, {
+        ...options,
+        near,
+      });
+
+      const newTotalErrors = getTotalErrors(errorsMap);
+      console.log("cleaned totalErrors:", newTotalErrors, "near:", near);
+      if (newTotalErrors === totalErrors) {
+        console.log("same errors number, breack extra passes");
+      }
+      totalErrors = newTotalErrors;
+    }
   }
 }

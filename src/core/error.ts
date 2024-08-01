@@ -28,27 +28,27 @@ export async function calculateErrorMap(
         );
       });
 
-      const newPattern = getPatternColors(x, y, newColorGrid, options);
+      const currentPattern = getPatternColors(x, y, newColorGrid, options);
+      const goodPatterns = colors.find(
+        (data) => data.color === newColorGrid[x][y]
+      )!.patterns;
 
-      let filteredColors = colors.map(({ patterns }) => {
-        const patternData = patterns.map((pattern) => {
-          const score = getPatternScore(newPattern, pattern);
-          return {
-            score,
-            count: pattern.count,
-          };
-        });
-
-        const maxScore = patternData.reduce(
-          (max, { score }) => Math.max(max, score),
-          0
-        );
-
-        return -(maxScore - MAXIMAL_PATTERN_POINTS);
+      const patternData = goodPatterns.map((pattern) => {
+        const score = getPatternScore(currentPattern, pattern);
+        return {
+          score,
+          count: pattern.count,
+        };
       });
 
-      filteredColors.sort((a, b) => a - b);
-      errorGrid[x][y] = Math.ceil(filteredColors[0]);
+      const maxScore = patternData.reduce(
+        (max, { score }) => Math.max(max, score),
+        0
+      );
+
+      const errors = -(maxScore - MAXIMAL_PATTERN_POINTS);
+
+      errorGrid[x][y] = Math.ceil(Math.max(0, errors - 1));
     }
   );
 
